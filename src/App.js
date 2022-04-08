@@ -1,74 +1,81 @@
 import './styles/main.scss'
-import search from './img/magnifying-glass.svg'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useDebounce } from './utilities';
 import React, {useEffect, useState} from 'react';
 import axios from 'axios';
 
 function App() {
   const [searchTerm, setSearchTerm ] = useState('')
-  const [location, setLocation ] = useState('Atlanta, GA')
+  const [location, setLocation ] = useState('')
   const [sort, setSort ] = useState('best_match')
   const [radius, setRadius ] = useState('25')
   const [results, setResults] = useState([])
+  const [openNow, setOpenNow] = useState(false)
+  const [priceArray, setPriceArray] = useState([])
+  const [priceString, setPriceString] = useState('1, 2, 3, 4')
   const [priceMenuExpanded, setPriceMenuExpanded] = useState(false)
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500)
+  const debouncedLocation = useDebounce(location, 500)
 
-  const apiKey = process.env.REACT_APP_API_KEY;
-  const baseURL = process.env.REACT_APP_BASE_URL;
-
-
-
-  // process.env.REACT_APP_API_KEY
-
-
-  const handleSearch = () => {
-    let selectedSort = `best_match`
-    if(this.sortText.textContent.indexOf(`Rating`) !== -1) selectedSort = `rating`
-    else if(this.sortText.textContent.indexOf(`Reviews`) !== -1) selectedSort = `review_count`
-    else if(this.sortText.textContent.indexOf(`Distance`) !== -1) selectedSort = `distance`
-
-    const distance = parseInt(this.radiusText.textContent.substring(0,2).trim()) * 800
-    console.log(distance)
-
-    const openNow = document.querySelector(`.open-now__checkbox`).checked
-
-    let priceString = ``
-    const priceChecks = document.querySelectorAll(`.price-range__checkbox`)
-    for(let i=0;i<4;i++){
-        if (priceChecks[i].checked) priceString += `${i+1}, `
+  const updatePriceFilters = (e) => {
+    let updatedPriceArray = priceArray
+    const selectedBox = e.target.name
+    if(priceArray.includes(selectedBox)){
+        updatedPriceArray = priceArray.filter(box => box != selectedBox)
     }
-    if(priceString === `` || this.priceFilter===false) priceString = `1, 2, 3, 4, `
-    priceString = this.removeLastComma(priceString)
+    else{
+        updatedPriceArray = priceArray.push(selectedBox)
+    }
+    setPriceArray(updatedPriceArray)
+
+    let updatedPriceString = ''
+    if(updatedPriceArray.includes('$')) updatedPriceString = updatedPriceString + '1, '
+    else if(updatedPriceArray.includes('$$')) updatedPriceString = updatedPriceString + '2, '
+    else if(updatedPriceArray.includes('$$$')) updatedPriceString = updatedPriceString + '3, '
+    else if(updatedPriceArray.includes('$$$$')) updatedPriceString = updatedPriceString + '4, '
+    else updatedPriceString = '1, 2, 3, 4, '
+
+    updatedPriceString.slice(0, updatedPriceString.length-2)
+
+    setPriceString(updatedPriceString)
+  }
+
+
+  const getBusinesses = async (termInput, locationInput) => {
+    const searchLocation = locationInput ? locationInput : "Atlanta, GA"
+
+    const distance = parseInt(radius.substring(0,2).trim()) * 800
 
     const data = {
-        _ep: `/businesses/search`,
-        term: searchTerm,
-        location: location,
-        sort_by: sort,
-        radius: distance,
-        open_now: openNow,
-        price: priceString,
+      _ep: `/businesses/search`,
+      term: termInput,
+      location: searchLocation,
+      sort_by: sort,
+      radius: distance,
+      open_now: openNow,
+      price: priceString,
     }
 
     const headers = {
-        Authorization: `Bearer ${this.API_KEY}`
+      Authorization: `Bearer ${process.env.REACT_APP_API_KEY}`
     }
 
-    axios.get(this.API_BASE_URL, { params: data, headers: headers }).then(this.processResults)
-}
-
-
-  const getBusinesses = async (url, query) => {
     try {
-      const response = await axios.get(`${url}&query=${query}`)
-      console.log(response)
-      setResults(response.data.results)
+      const response = await axios.get(process.env.REACT_APP_BASE_URL, { params: data, headers: headers })
+      console.log(response.data.businesses)
+      setResults(response.data.businesses)
     } catch (err) {
       console.log(err.message, err.code)
     }
   }
+
+  useEffect(() => {
+    if(debouncedSearchTerm || debouncedLocation){
+      getBusinesses(debouncedSearchTerm, debouncedLocation)
+    } else{
+      setResults([])
+    }
+  }, [debouncedSearchTerm, debouncedLocation])
 
 
   return (
@@ -82,43 +89,43 @@ function App() {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
         <input className="search-controls__input search-controls__input_location" id="location" name="location" placeholder="location" type="text" 
-          value={searchTerm}
+          value={location}
           onChange={(e) => setLocation(e.target.value)}
         />
 
 				<div className="search-menu">
-          <select name="sort" className="search-menu__sort-list" id="sort" onChange={(e) => setSort(e.target.id)}>
-            <option className="search-menu__item search-menu__item_relevance" value="Relevance">Sort by Relevance</option>
-            <option className="search-menu__item search-menu__item_rating" value="Rating">Sort by Rating</option>
-            <option className="search-menu__item search-menu__item_count" value="Reviews">Sort by # Reviews</option>
-            <option className="search-menu__item search-menu__item_distance" value="Distance">Sort by Distance</option>
+          <select name="sort" className="search-menu__sort-list" id="sort" onChange={(e) => setSort(e.target.value)}>
+            <option className="search-menu__item search-menu__item_relevance" value="best_match">Sort by Relevance</option>
+            <option className="search-menu__item search-menu__item_rating" value="rating">Sort by Rating</option>
+            <option className="search-menu__item search-menu__item_count" value="review_count">Sort by # Reviews</option>
+            <option className="search-menu__item search-menu__item_distance" value="distance">Sort by Distance</option>
           </select>
 				</div>
 
 				<div className="price-range"><span className="price-range__toggle" onClick={() => setPriceMenuExpanded(!priceMenuExpanded)}>Price Range <span className="price-range__symbol">{priceMenuExpanded ? "<>" : "><"}</span></span>
 					<div className={priceMenuExpanded ? "price-range__input" : "price-range__input hidden"}>
-						<input className="price-range__checkbox" id="$" name="$" type="checkbox" />
+						<input className="price-range__checkbox" id="$" name="$" type="checkbox" onClick={(e) => updatePriceFilters(e)} />
 						<label className="price-range__label">$</label>
-						<input className="price-range__checkbox" id="$$" name="$$" type="checkbox" />
+						<input className="price-range__checkbox" id="$$" name="$$" type="checkbox" onClick={(e) => updatePriceFilters(e)} />
 						<label className="price-range__label">$$</label>
-						<input className="price-range__checkbox" id="$$$" name="$$$" type="checkbox" />
+						<input className="price-range__checkbox" id="$$$" name="$$$" type="checkbox" onClick={(e) => updatePriceFilters(e)} />
 						<label className="price-range__label">$$$</label>
-						<input className="price-range__checkbox" id="$$$$" name="$$$$" type="checkbox" />
+						<input className="price-range__checkbox" id="$$$$" name="$$$$" type="checkbox" onClick={(e) => updatePriceFilters(e)} />
 						<label className="price-range__label">$$$$</label>
 					</div>
 				</div>
         <div className="radius-menu">
           <p className="radius-menu__within">Within</p>
-          <select name="sort" className="radius-menu__list" id="radius" onChange={(e) => setRadius(e.target.id)}>
+          <select name="sort" className="radius-menu__list" id="radius" defaultValue="25" onChange={(e) => setRadius(parseInt(e.target.id))}>
             <option className="radius-menu__item radius-menu__item_5" value="5">5 miles</option>
 						<option className="radius-menu__item radius-menu__item_15" value="15">15 miles</option>
-						<option className="radius-menu__item radius-menu__item_25" value="25" selected>25 miles</option>
+						<option className="radius-menu__item radius-menu__item_25" value="25">25 miles</option>
 						<option className="radius-menu__item radius-menu__item_50" value="50">50 miles</option>
           </select>
 				</div>
 				<div className="open-now">
 					<label className="open-now__label">Open Now</label>
-					<input className="open-now__checkbox" id="open" name="open" type="checkbox" />
+					<input className="open-now__checkbox" id="open" name="open" type="checkbox" onClick={() => setOpenNow(!openNow)}/>
 				</div>
 			</section>
 			<section className="results">
