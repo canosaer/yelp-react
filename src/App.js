@@ -129,6 +129,45 @@ function App() {
 				</div>
 			</section>
 			<section className="results">
+        {results.map((result, i) => {
+          const key = `result--${i}`
+          const imageSource = result.image_url
+
+          let transactions = ''
+          if(result.transactions[0]){
+            transactions = ' • '
+            for(let i=0;i<result.transactions.length;i++){
+              let newTransaction = result.transactions[i].replace(/^\w/, (c) => c.toUpperCase())
+              transactions = transactions + newTransaction
+              if(result.transactions[i+1]) transactions = transactions + ', '
+            }
+          }
+
+          let categories = ''
+          for(let i=0;i<result.categories.length;i++){
+            categories = categories + result.categories[i].title
+            if(result.categories[i+1]) categories = categories + ', '
+          }
+
+          return(
+            <div className="results__row" key={key}>
+              <a className="results__image-slot" href={result.url} target="_blank"><img className="results__photo" src={imageSource} alt="business image" loading="lazy" /></a>
+              <a href={result.url} target="_blank" className="results__name">{result.name}</a>
+              <div className="results__rating-row"><span className="results__rating">{result.rating} stars</span><span className="results__reviews"> ({result.review_count} reviews)</span></div>
+              <div className="results__info-row"><span className="results__price">{result.price} • {categories}</span><span className="results__category">{transactions}</span></div>
+              <p className="results__address-row"> </p>
+              <p className="results__address-row"> </p>
+              <p className="results__address-row"> </p>
+            </div>
+          )
+
+        })}
+
+
+
+
+
+
 			</section>
 		</main>
   );
