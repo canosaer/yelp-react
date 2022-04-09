@@ -20,52 +20,54 @@ function App() {
   const updatePriceFilters = (e) => {
     let updatedPriceArray = priceArray
     const selectedBox = e.target.name
-    if(priceArray.includes(selectedBox)){
-        updatedPriceArray = priceArray.filter(box => box != selectedBox)
+    
+    if(updatedPriceArray.includes(selectedBox)){
+      updatedPriceArray = priceArray.filter(box => box != selectedBox)
     }
     else{
-        updatedPriceArray = priceArray.push(selectedBox)
+      updatedPriceArray = [...priceArray, selectedBox]
     }
     setPriceArray(updatedPriceArray)
 
     let updatedPriceString = ''
     if(updatedPriceArray.includes('$')) updatedPriceString = updatedPriceString + '1, '
-    else if(updatedPriceArray.includes('$$')) updatedPriceString = updatedPriceString + '2, '
-    else if(updatedPriceArray.includes('$$$')) updatedPriceString = updatedPriceString + '3, '
-    else if(updatedPriceArray.includes('$$$$')) updatedPriceString = updatedPriceString + '4, '
-    else updatedPriceString = '1, 2, 3, 4, '
+    if(updatedPriceArray.includes('$$')) updatedPriceString = updatedPriceString + '2, '
+    if(updatedPriceArray.includes('$$$')) updatedPriceString = updatedPriceString + '3, '
+    if(updatedPriceArray.includes('$$$$')) updatedPriceString = updatedPriceString + '4, '
+    if(!updatedPriceString) updatedPriceString = '1, 2, 3, 4, '
 
-    updatedPriceString.slice(0, updatedPriceString.length-2)
+    updatedPriceString = updatedPriceString.slice(0, updatedPriceString.length-2)
 
     setPriceString(updatedPriceString)
   }
 
 
   const getBusinesses = async (termInput, locationInput) => {
-    const searchLocation = locationInput ? locationInput : "Atlanta, GA"
+    if(termInput){
+      const searchLocation = locationInput ? locationInput : "Atlanta, GA"
 
-    const distance = parseInt(radius.substring(0,2).trim()) * 800
-
-    const data = {
-      _ep: `/businesses/search`,
-      term: termInput,
-      location: searchLocation,
-      sort_by: sort,
-      radius: distance,
-      open_now: openNow,
-      price: priceString,
-    }
-
-    const headers = {
-      Authorization: `Bearer ${process.env.REACT_APP_API_KEY}`
-    }
-
-    try {
-      const response = await axios.get(process.env.REACT_APP_BASE_URL, { params: data, headers: headers })
-      console.log(response.data.businesses)
-      setResults(response.data.businesses)
-    } catch (err) {
-      console.log(err.message, err.code)
+      const distance = parseInt(radius.substring(0,2).trim()) * 800
+  
+      const data = {
+        _ep: `/businesses/search`,
+        term: termInput,
+        location: searchLocation,
+        sort_by: sort,
+        radius: distance,
+        open_now: openNow,
+        price: priceString,
+      }
+  
+      const headers = {
+        Authorization: `Bearer ${process.env.REACT_APP_API_KEY}`
+      }
+  
+      try {
+        const response = await axios.get(process.env.REACT_APP_BASE_URL, { params: data, headers: headers })
+        setResults(response.data.businesses)
+      } catch (err) {
+        console.log(err.message, err.code)
+      }
     }
   }
 
@@ -76,6 +78,10 @@ function App() {
       setResults([])
     }
   }, [debouncedSearchTerm, debouncedLocation])
+
+  useEffect(() => {
+    getBusinesses(debouncedSearchTerm, debouncedLocation)
+  }, [openNow, priceString, radius, sort])
 
 
   return (
@@ -116,7 +122,7 @@ function App() {
 				</div>
         <div className="radius-menu">
           <p className="radius-menu__within">Within</p>
-          <select name="sort" className="radius-menu__list" id="radius" defaultValue="25" onChange={(e) => setRadius(parseInt(e.target.id))}>
+          <select name="sort" className="radius-menu__list" id="radius" defaultValue="25" onChange={(e) => setRadius(e.target.value)}>
             <option className="radius-menu__item radius-menu__item_5" value="5">5 miles</option>
 						<option className="radius-menu__item radius-menu__item_15" value="15">15 miles</option>
 						<option className="radius-menu__item radius-menu__item_25" value="25">25 miles</option>
@@ -155,9 +161,12 @@ function App() {
               <a href={result.url} target="_blank" className="results__name">{result.name}</a>
               <div className="results__rating-row"><span className="results__rating">{result.rating} stars</span><span className="results__reviews"> ({result.review_count} reviews)</span></div>
               <div className="results__info-row"><span className="results__price">{result.price} • {categories}</span><span className="results__category">{transactions}</span></div>
-              <p className="results__address-row"> </p>
-              <p className="results__address-row"> </p>
-              <p className="results__address-row"> </p>
+              <p className="results__address-row">{result.location.address1}</p>
+              {result.location.address2 ? <p className="results__address-row">{result.location.address2}</p> : null}
+              {result.location.address3 ? <p className="results__address-row">{result.location.address3}</p> : null}
+              <p className="results__address-row">{result.location.city}, {result.location.state} {result.location.zip_code}</p>
+
+
             </div>
           )
 
